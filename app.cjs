@@ -83,7 +83,6 @@ app.post("/", async (req, res) => {
       });
       const column_id = column_values.find((cv) => cv.id === 'text' && cv.column.title === 'OT').id;
       const board_id = sub.board.id;
-      sendOT(board_id, subItem_id, column_id , OT);
       const status = column_values.find((cv) => cv.id === 'status').text;
 
       insertItem(pool, { 
@@ -95,8 +94,8 @@ app.post("/", async (req, res) => {
         status: status
       });
 
+      sendOT(board_id, subItem_id, column_id , OT);
 
-      // { subItemId, endUserId, startDateTime, endDateTime, subStatus }
     });
 
 
