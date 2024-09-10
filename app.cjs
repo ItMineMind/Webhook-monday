@@ -51,11 +51,11 @@ app.post("/", async (req, res) => {
   try {
     const data = await fetchDataFromMonday(pulseId);
     const subItem = data.data.items[0].subitems;
-    
+
     subItem.forEach(sub => {
       const column_values = sub.column_values;
       const subItem_id = sub.id;
-      const timeTracking = column_values.find((cv) => cv.id === 'time_tracking');
+      const timeTracking = column_values.find((cv) => cv.id === 'time_tracking2');
       const time = timeTracking.history;
 
       var OT = 0;
@@ -78,12 +78,12 @@ app.post("/", async (req, res) => {
           endUserId: t.ended_user_id,
           startDateTime: t.started_at,
           endDateTime: t.ended_at,
-          subStatus: column_values.find((cv) => cv.id === 'status').text
+          subStatus: column_values.find((cv) => cv.id === 'status8').text
         });
       });
-      const column_id = column_values.find((cv) => cv.id === 'text' && cv.column.title === 'OT').id;
+      const column_id = column_values.find((cv) => cv.id === 'text2' && cv.column.title === 'OT').id;
       const board_id = sub.board.id;
-      const status = column_values.find((cv) => cv.id === 'status').text;
+      const status = column_values.find((cv) => cv.id === 'status8').text;
 
       insertItem(pool, { 
         itemId: data.data.items[0].id, 
