@@ -10,12 +10,14 @@ const insertItem = require("./insertItem.cjs");
 const insertSession = require("./insertSession.cjs");
 const calculateOvertime = require("./OT.cjs");
 const sendOT = require("./Monday_API/sendOT.cjs");
+const sendDate = require("./Monday_API/sendDate.cjs");
 
 // Change column id to your column id
 const time_tracking_id = "time_tracking";
 const status_id = "status";
 const text_id = "text";   // This is for OT column
 const text_name = "OT";   // This is for OT column
+const date_id = "date0";   // This is for Date column
 
 
 // Initialize Express and HTTP server
@@ -57,10 +59,13 @@ app.post("/", async (req, res) => {
   try {
     const data = await fetchSubItemDataFromMonday(pulseId);
     const item = data.data.items[0];
+    // const user = data.data.items[0].column_values.find((cv) => cv.id == "people").text;
     const column_values = item.column_values;
     const id = item.id;
     const timeTracking = column_values.find((cv) => cv.id == time_tracking_id);
     const time = timeTracking.history;
+    const column_id = column_values.find((cv) => cv.id == text_id && cv.column.title == text_name).id;
+    const status = column_values.find((cv) => cv.id == status_id).text;
 
     var OT = 0;
     time.forEach(t => {
@@ -83,13 +88,12 @@ app.post("/", async (req, res) => {
           endUserId: t.ended_user_id,
           startDateTime: t.started_at,
           endDateTime: t.ended_at,
-          subStatus: column_values.find((cv) => cv.id == status_id).text
+          subStatus: status
         });
       }
     
     });
-    const column_id = column_values.find((cv) => cv.id == text_id && cv.column.title == text_name).id;
-    const status = column_values.find((cv) => cv.id == status_id).text;
+    
     if(isDbConnected){
       insertItem(pool, {
         itemId: id,
@@ -102,6 +106,8 @@ app.post("/", async (req, res) => {
     }
 
     sendOT(board_id, id, column_id, OT);
+    sendDate(board_id, id, date_id);
+   
     console.log("End of trigger");
     return res.status(200).send({ data });
   } 

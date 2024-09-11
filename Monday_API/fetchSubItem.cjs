@@ -7,6 +7,10 @@ async function fetchSubItemDataFromMonday(pulseId) {
             id
             name
             column_values {
+                ... on PeopleValue{
+                    id
+                    text
+                }
                 ... on TimeTrackingValue {
                     id
                     running
