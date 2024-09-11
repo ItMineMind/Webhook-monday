@@ -105,8 +105,16 @@ app.post("/", async (req, res) => {
       });
     }
 
-    sendOT(board_id, id, column_id, OT);
-    sendDate(board_id, id, date_id);
+    sendOT(board_id, id, column_id, OT).then((response) => {
+      if(response.errors){
+        console.error("Send OT Error:", response.errors);
+      }
+    });
+    sendDate(board_id, id, date_id).then((response) => {
+      if(response.errors){
+        console.error("Send Date Error:", response.errors);
+      }
+    });
    
     console.log("End of trigger");
     return res.status(200).send({ data });
