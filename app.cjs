@@ -2,16 +2,20 @@
 const express = require("express");
 const http = require("http");
 const bodyParser = require("body-parser");
-
 const pool = require("./connection.cjs");
 // Importing separated modules
 const fetchDataFromMonday = require("./Monday_API/fetchData.cjs");
+const fetchSubItemDataFromMonday = require("./Monday_API/fetchSubItem.cjs");
 const insertItem = require("./insertItem.cjs");
 const insertSession = require("./insertSession.cjs");
 const calculateOvertime = require("./OT.cjs");
 const sendOT = require("./Monday_API/sendOT.cjs");
 
-// Load environment variables
+// Change column id to your column id
+const time_tracking_id = "time_tracking";
+const status_id = "status";
+const text_id = "text";   // This is for OT column
+const text_name = "OT";   // This is for OT column
 
 
 // Initialize Express and HTTP server
@@ -20,24 +24,25 @@ const server = http.createServer(app);
 
 // Middleware
 app.use(bodyParser.json());
-
+var isDbConnected = false;
 // Test database connection
 async function testDatabaseConnection() {
   try {
     const client = await pool.connect();
     console.log("Database connected successfully!");
     client.release();
+    isDbConnected = true;
   } catch (err) {
-    console.error("Failed to connect to the database:", err.message);
+    console.error("Failed to connect to the database", err.message);
+    isDbConnected = false;
   }
 }
 testDatabaseConnection();
 
-
-
 app.post("/", async (req, res) => {
-  // console.log("Request body:", req.body);
+  console.log("Has received a request");
 
+  const board_id = req.body.event.boardId;
   const challenge = req.body.challenge;
   if (challenge) {
     return res.status(200).send({ challenge });
@@ -48,62 +53,120 @@ app.post("/", async (req, res) => {
     return res.status(400).send({ error: "pulseId is missing" });
   }
 
+  //// This for subitem status trigger
   try {
-    const data = await fetchDataFromMonday(pulseId);
-    const subItem = data.data.items[0].subitems;
+    const data = await fetchSubItemDataFromMonday(pulseId);
+    const item = data.data.items[0];
+    const column_values = item.column_values;
+    const id = item.id;
+    const timeTracking = column_values.find((cv) => cv.id == time_tracking_id);
+    const time = timeTracking.history;
 
-    subItem.forEach(sub => {
-      const column_values = sub.column_values;
-      const subItem_id = sub.id;
-      const timeTracking = column_values.find((cv) => cv.id === 'time_tracking2');
-      const time = timeTracking.history;
+    var OT = 0;
+    time.forEach(t => {
+      const startDate = new Date(t.started_at);
+      const endDate = new Date(t.ended_at);
 
-      var OT = 0;
-      time.forEach(t => {
-        const startDate = new Date(t.started_at);
-        const endDate = new Date(t.ended_at);
-  
-        startDate.setHours(startDate.getHours() + 7);
-        endDate.setHours(endDate.getHours() + 7);
-  
-        const strStartDate = startDate.toISOString().slice(0, 19).split("T")[0];
-        const strStartTime = startDate.toISOString().slice(0, 19).split("T")[1];
-        const strEndDate = endDate.toISOString().slice(0, 19).split("T")[0];
-        const strEndTime = endDate.toISOString().slice(0, 19).split("T")[1];  
-  
-        const OTresult = calculateOvertime(strStartDate, strStartTime, strEndDate, strEndTime);
-        OT += OTresult;
+      startDate.setHours(startDate.getHours() + 7);
+      endDate.setHours(endDate.getHours() + 7);
+
+      const strStartDate = startDate.toISOString().slice(0, 19).split("T")[0];
+      const strStartTime = startDate.toISOString().slice(0, 19).split("T")[1];
+      const strEndDate = endDate.toISOString().slice(0, 19).split("T")[0];
+      const strEndTime = endDate.toISOString().slice(0, 19).split("T")[1];
+
+      const OTresult = calculateOvertime(strStartDate, strStartTime, strEndDate, strEndTime);
+      OT += OTresult;
+      if(isDbConnected){
         insertSession(pool, {
-          subItemId: subItem_id,
+          subItemId: id,
           endUserId: t.ended_user_id,
           startDateTime: t.started_at,
           endDateTime: t.ended_at,
-          subStatus: column_values.find((cv) => cv.id === 'status8').text
+          subStatus: column_values.find((cv) => cv.id == status_id).text
         });
-      });
-      const column_id = column_values.find((cv) => cv.id === 'text2' && cv.column.title === 'OT').id;
-      const board_id = sub.board.id;
-      const status = column_values.find((cv) => cv.id === 'status8').text;
-
-      insertItem(pool, { 
-        itemId: data.data.items[0].id, 
-        itemName: data.data.items[0].name, 
-        subItemId: subItem_id, 
-        subItemName: sub.name, 
-        duration: timeTracking.duration, 
+      }
+    
+    });
+    const column_id = column_values.find((cv) => cv.id == text_id && cv.column.title == text_name).id;
+    const status = column_values.find((cv) => cv.id == status_id).text;
+    if(isDbConnected){
+      insertItem(pool, {
+        itemId: id,
+        itemName: item.name,
+        subItemId: id,
+        subItemName: item.name,
+        duration: timeTracking.duration,
         status: status
       });
+    }
 
-      sendOT(board_id, subItem_id, column_id , OT);
-
-    });
-
-
+    sendOT(board_id, id, column_id, OT);
+    console.log("End of trigger");
     return res.status(200).send({ data });
-  } catch (error) {
+  } 
+  catch (error) {
     console.error("Error:", error.message);
     return res.status(500).send({ error: "Failed to fetch and save data" });
   }
+
+  // // This for item status trigger
+  // try {
+  //   const data = await fetchDataFromMonday(pulseId);
+  //   const subItem = data.data.items[0].subitems;
+
+  //   subItem.forEach(sub => {
+  //     const column_values = sub.column_values;
+  //     const subItem_id = sub.id;
+  //     const timeTracking = column_values.find((cv) => cv.id === 'time_tracking');
+  //     const time = timeTracking.history;
+
+  //     var OT = 0;
+  //     time.forEach(t => {
+  //       const startDate = new Date(t.started_at);
+  //       const endDate = new Date(t.ended_at);
+  
+  //       startDate.setHours(startDate.getHours() + 7);
+  //       endDate.setHours(endDate.getHours() + 7);
+  
+  //       const strStartDate = startDate.toISOString().slice(0, 19).split("T")[0];
+  //       const strStartTime = startDate.toISOString().slice(0, 19).split("T")[1];
+  //       const strEndDate = endDate.toISOString().slice(0, 19).split("T")[0];
+  //       const strEndTime = endDate.toISOString().slice(0, 19).split("T")[1];  
+  
+  //       const OTresult = calculateOvertime(strStartDate, strStartTime, strEndDate, strEndTime);
+  //       OT += OTresult;
+  //       insertSession(pool, {
+  //         subItemId: subItem_id,
+  //         endUserId: t.ended_user_id,
+  //         startDateTime: t.started_at,
+  //         endDateTime: t.ended_at,
+  //         subStatus: column_values.find((cv) => cv.id === 'status').text
+  //       });
+  //     });
+  //     const column_id = column_values.find((cv) => cv.id === 'text' && cv.column.title === 'OT').id;
+  //     const board_id = sub.board.id;
+  //     const status = column_values.find((cv) => cv.id === 'status').text;
+
+  //     insertItem(pool, { 
+  //       itemId: data.data.items[0].id, 
+  //       itemName: data.data.items[0].name, 
+  //       subItemId: subItem_id, 
+  //       subItemName: sub.name, 
+  //       duration: timeTracking.duration, 
+  //       status: status
+  //     });
+
+  //     sendOT(board_id, subItem_id, column_id , OT);
+
+  //   });
+
+
+  //   return res.status(200).send({ data });
+  // } catch (error) {
+  //   console.error("Error:", error.message);
+  //   return res.status(500).send({ error: "Failed to fetch and save data" });
+  // }
 });
 
 // Start server

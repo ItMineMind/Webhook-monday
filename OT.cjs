@@ -80,9 +80,9 @@ function calculateOvertime(startDate, startTime, endDate, endTime) {
 
 // Example usage
 // const startDate = "2024-08-20";
-// const startTime = "08:00:00";
+// const startTime = "08:30:00";
 // const endDate = "2024-08-20";
-// const endTime = "17:00:00";
+// const endTime = "19:00:00";
 
 // console.log(calculateOvertime(startDate, startTime, endDate, endTime));
 
