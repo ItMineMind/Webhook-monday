@@ -32,7 +32,6 @@ async function insertSession(
     } catch (error) {
       console.error("Error inserting session:", error.message);
     }
-  }
-  
-  module.exports = insertSession;
-  
+}
+
+module.exports = insertSession;

@@ -27,7 +27,7 @@ async function sendOT(board_id,subitem_id,column_id,OT) {
         );
         return response.data;
     } catch (error) {
-        console.error("Error fetching data from Monday.com:", error.message);
+        console.error("Error sending data to Monday.com:", error.message);
         throw error;
     }
   }
