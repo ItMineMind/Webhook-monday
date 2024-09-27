@@ -14,12 +14,12 @@ const sendDate = require("./Monday_API/sendDate.cjs");
 // const sendDuration = require("./Monday_API/sendDurations.cjs");
 
 // Change column id to your column id
-const time_tracking_id = "time_tracking";
-const status_id = "status";
-const text_id = "text";   // This is for OT column
+const time_tracking_id = "time_tracking2";
+const status_id = "status8";
+const text_id = "text2";   // This is for OT column
 const text_name = "OT";   // This is for OT column
-const date_id = "date0";   // This is for Date column
-const person_id = "person";   // This is for User column
+const date_id = "date6";   // This is for Date column
+// const person_id = "person";   // This is for User column
 // const duration_id = "text6";   // This is for Duration column
 
 
@@ -73,16 +73,8 @@ app.post("/", async (req, res) => {
     time.forEach(t => {
       const startDate = new Date(t.started_at);
       const endDate = new Date(t.ended_at);
-
-      startDate.setHours(startDate.getHours() + 7);
-      endDate.setHours(endDate.getHours() + 7);
-
-      const strStartDate = startDate.toISOString().slice(0, 19).split("T")[0];
-      const strStartTime = startDate.toISOString().slice(0, 19).split("T")[1];
-      const strEndDate = endDate.toISOString().slice(0, 19).split("T")[0];
-      const strEndTime = endDate.toISOString().slice(0, 19).split("T")[1];
-
-      const OTresult = calculateOvertime(strStartDate, strStartTime, strEndDate, strEndTime);
+      
+      const OTresult = calculateOvertime(startDate,endDate);
       OT += OTresult;
       if(isDbConnected){
         insertSession(pool, {

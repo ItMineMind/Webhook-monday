@@ -1,12 +1,8 @@
-function calculateOvertime(startDate, startTime, endDate, endTime) {
-    const startDateTime = new Date(`${startDate}T${startTime}`);
-    const endDateTime = new Date(`${endDate}T${endTime}`);
-
-    const isWeekend = startDateTime.getDay() === 6 || startDateTime.getDay() === 0;
-    const isSameDay = startDateTime.toDateString() === endDateTime.toDateString();
-
-    const startHour = startDateTime.getHours() + startDateTime.getMinutes() / 60;
-    const endHour = endDateTime.getHours() + endDateTime.getMinutes() / 60;
+function calculateOvertime(startDate,endDate) {
+    const isWeekend = startDate.getDay() === 6 || startDate.getDay() === 0;
+    const isSameDay = startDate.toDateString() === endDate.toDateString();
+    const startHour = startDate.getHours() + startDate.getMinutes() / 60;
+    const endHour = endDate.getHours() + endDate.getMinutes() / 60;
 
     let OT = 0;
     let sections = [];
@@ -19,7 +15,7 @@ function calculateOvertime(startDate, startTime, endDate, endTime) {
         }
 
     } else {
-        sections = getSectionsTimeNotSameDate(startHour,endHour,startDateTime,endDateTime);
+        sections = getSectionsTimeNotSameDate(startHour,endHour,startDate,endDate);
         if(sections[4] == 1){
             for (let i = 0; i < sections.length; i++) {
                 OT += sections[i][0] * 3 + sections[i][1] * 1 + sections[i][2] * 1 + sections[i][3] * 3;
