@@ -144,11 +144,11 @@ const getSectionsTimeNotSameDate = (startHour,endHour,startDate,endDate) => {
 // console.log(x);
 
 
-const startDate = "2024-08-20";
-const startTime = "08:30:00";
-const endDate = "2024-08-21";
-const endTime = "00:30:00";
+// const startDate = "2024-08-24";
+// const startTime = "08:30:00";
+// const endDate = "2024-08-24";
+// const endTime = "18:30:00";
 
-console.log(calculateOvertime(startDate, startTime, endDate, endTime));
+// console.log(calculateOvertime(startDate, startTime, endDate, endTime));
 
 module.exports = calculateOvertime;
