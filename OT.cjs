@@ -4,6 +4,11 @@ function calculateOvertime(startDate,endDate) {
     const startHour = startDate.getHours() + startDate.getMinutes() / 60;
     const endHour = endDate.getHours() + endDate.getMinutes() / 60;
 
+    let options = { timeZone: "Asia/Bangkok", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false };
+
+    let formattedTime = startDate.toLocaleTimeString("en-US", options);
+    // console.log(formattedTime);
+
     let OT = 0;
     let sections = [];
     if (isSameDay) {
@@ -26,8 +31,6 @@ function calculateOvertime(startDate,endDate) {
             }
         }
     }
-
-
     return OT;
 }
 
@@ -60,7 +63,7 @@ const getSectionsTimeSameDay = (startHour,endHour) => {
             sections.push(endHour - workEnd);
         }
     }
-    else if(startHour >= workStart && startHour < lunchStart){
+    else if(startHour < lunchStart){
         sections.push(0)
         if(endHour <= lunchStart){
             sections.push(endHour - startHour);
@@ -77,7 +80,7 @@ const getSectionsTimeSameDay = (startHour,endHour) => {
             sections.push(endHour - workEnd);
         }
     }
-    else if(startHour >= lunchStart && startHour < workEnd){
+    else if(startHour < workEnd){
         sections = [0,0];
         if(endHour <= workEnd){
             sections.push(endHour - startHour);
@@ -135,16 +138,12 @@ const getSectionsTimeNotSameDate = (startHour,endHour,startDate,endDate) => {
     return daySection;
 }
 
-// console.log(getSectionsTimeSameDay(10,11,true));
-// const x = getSectionsTimeNotSameDate(10,2,new Date("2024-09-26"),new Date("2024-09-30"));
-// console.log(x);
 
-
-// const startDate = "2024-08-24";
+// const startDate = "2024-10-02";
 // const startTime = "08:30:00";
-// const endDate = "2024-08-24";
-// const endTime = "18:30:00";
+// const endDate = "2024-10-02";
+// const endTime = "23:00:00";
 
-// console.log(calculateOvertime(startDate, startTime, endDate, endTime));
+// console.log(calculateOvertime(new Date(`${startDate}T${startTime}`),new Date(`${endDate}T${endTime}`)));
 
 module.exports = calculateOvertime;

@@ -1,34 +1,28 @@
 async function insertSession(
     pool,
-    { subItemId, endUserId, startDateTime, endDateTime, subStatus }
+    { owner, date, type, task , service , startTime, endTime }
   ) {
-    console.log("Data being inserted/updated:", {
-        subItemId,
-        endUserId,
-        startDateTime,
-        endDateTime,
-        subStatus
-      });
-      
-    if (!subItemId || !endUserId || !startDateTime) {
-      console.error("subItemId, endUserId, or startDateTime are missing");
-      return;
-    }
   
     const query = `
-      INSERT INTO public.sessions (subItemId, endUserId, startDateTime, endDateTime, subStatus)
-      VALUES ($1, $2, $3, $4, $5)
-      ON CONFLICT (subItemId, endUserId, startDateTime)
-      DO UPDATE SET
-        endDateTime = EXCLUDED.endDateTime,
-        subStatus = EXCLUDED.subStatus;
+      INSERT INTO public.sessions (owner, date, type, task, start_time, end_time, service)
+      SELECT $1, $2, $3, $4, $5, $6, $7
+      WHERE NOT EXISTS (
+        SELECT 1 FROM public.sessions
+        WHERE owner = $1
+        AND date = $2
+        AND type = $3
+        AND task = $4
+        AND start_time = $5
+        AND end_time = $6
+        AND service = $7
+      )
     `;
+
   
-    const values = [subItemId, endUserId, startDateTime, endDateTime, subStatus];
+    const values = [owner, date, type, task, startTime, endTime, service];
   
     try {
       await pool.query(query, values);
-      console.log(`Session for subitem ${subItemId} added/updated successfully.`);
     } catch (error) {
       console.error("Error inserting session:", error.message);
     }

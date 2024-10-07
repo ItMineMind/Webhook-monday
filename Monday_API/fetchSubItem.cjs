@@ -21,7 +21,11 @@ async function fetchSubItemDataFromMonday(pulseId) {
                         ended_at
                     }
                 }
-                
+                ... on NumbersValue{
+                    id
+										value
+      
+                    }
                 ... on TextValue{
                     id
                     text
@@ -52,7 +56,7 @@ async function fetchSubItemDataFromMonday(pulseId) {
         },
       }
     );
-
+    
     return response.data;
   } catch (error) {
     console.error("Error fetching data from Monday.com:", error.message);

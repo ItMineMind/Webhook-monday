@@ -2,51 +2,45 @@
 const express = require("express");
 const http = require("http");
 const bodyParser = require("body-parser");
-const pool = require("./connection.cjs");
 // Importing separated modules
 const fetchDataFromMonday = require("./Monday_API/fetchData.cjs");
 const fetchSubItemDataFromMonday = require("./Monday_API/fetchSubItem.cjs");
-const insertItem = require("./insertItem.cjs");
 const insertSession = require("./insertSession.cjs");
 const calculateOvertime = require("./OT.cjs");
 const sendOT = require("./Monday_API/sendOT.cjs");
-const sendDate = require("./Monday_API/sendDate.cjs");
-// const sendDuration = require("./Monday_API/sendDurations.cjs");
+const getInsertData = require("./getInsertData.cjs");
+
+
+const pool = require("./connection.cjs");
+
+var isDbConnected = false;
+async function testDatabaseConnection() {
+    try {
+      const client = await pool.connect();
+      console.log("Database connected successfully!");
+      client.release();
+      isDbConnected = true;
+    } catch (err) {
+      console.error("Failed to connect to the database", err.message);
+      isDbConnected = false;
+    }
+  }
+testDatabaseConnection();
 
 // Change column id to your column id
-const time_tracking_id = "time_tracking2";
-const status_id = "status8";
-const text_id = "text2";   // This is for OT column
-const text_name = "OT";   // This is for OT column
-const date_id = "date6";   // This is for Date column
-// const person_id = "person";   // This is for User column
-// const duration_id = "text6";   // This is for Duration column
+const time_tracking_id = "time_tracking1";
+const ot_id = "ot";   // This is for OT column
+const person_id = "person";   // This is for User column
+const service_noid = "text9";
 
-
-// Initialize Express and HTTP server
 const app = express();
 const server = http.createServer(app);
-
-// Middleware
 app.use(bodyParser.json());
-var isDbConnected = false;
-// Test database connection
-async function testDatabaseConnection() {
-  try {
-    const client = await pool.connect();
-    console.log("Database connected successfully!");
-    client.release();
-    isDbConnected = true;
-  } catch (err) {
-    console.error("Failed to connect to the database", err.message);
-    isDbConnected = false;
-  }
-}
-testDatabaseConnection();
 
 app.post("/", async (req, res) => {
   console.log("Has received a request");
-
+  // console.log(req.body);
+  
   const challenge = req.body.challenge;
   if (challenge) {
     console.log("Confirming challenge");
@@ -54,6 +48,7 @@ app.post("/", async (req, res) => {
   }
 
   const { pulseId } = req.body.event;
+
   if (!pulseId) {
     return res.status(400).send({ error: "pulseId is missing" });
   }
@@ -61,58 +56,34 @@ app.post("/", async (req, res) => {
   try {
     const data = await fetchSubItemDataFromMonday(pulseId);
     const item = data.data.items[0];
-    // const user = data.data.items[0].column_values.find((cv) => cv.id == person_id).text;
+    const owner = data.data.items[0].column_values.find((cv) => cv.id == person_id).text;
     const column_values = item.column_values;
     const id = item.id;
     const timeTracking = column_values.find((cv) => cv.id == time_tracking_id);
     const time = timeTracking.history;
-    const column_id = column_values.find((cv) => cv.id == text_id && cv.column.title == text_name).id;
-    const status = column_values.find((cv) => cv.id == status_id).text;
+    const column_id = column_values.find((cv) => cv.id == ot_id).id;
+    const task = item.name;
+    const service_no = column_values.find((cv) => cv.id == service_noid).text;
 
     var OT = 0;
     time.forEach(t => {
       const startDate = new Date(t.started_at);
       const endDate = new Date(t.ended_at);
-      
       const OTresult = calculateOvertime(startDate,endDate);
-      OT += OTresult;
-      if(isDbConnected){
-        insertSession(pool, {
-          subItemId: id,
-          endUserId: t.ended_user_id,
-          startDateTime: t.started_at,
-          endDateTime: t.ended_at,
-          subStatus: status
-        });
+      const insertTimeData = getInsertData(owner, task, service_no, startDate, endDate);
+      console.log("Insert Data:", insertTimeData);
+      for (let i = 0; i < insertTimeData.length; i++) {
+        insertSession(pool,insertTimeData[i]);
       }
+      OT += OTresult;
+
     });
-    
-    if(isDbConnected){
-      insertItem(pool, {
-        itemId: id,
-        itemName: item.name,
-        subItemId: id,
-        subItemName: item.name,
-        duration: timeTracking.duration,
-        status: status
-      });
-    }
 
     sendOT(board_id, id, column_id, OT).then((response) => {
       if(response.errors){
         console.error("Send OT Error:", response.errors);
       }
     });
-    sendDate(board_id, id, date_id).then((response) => {
-      if(response.errors){
-        console.error("Send Date Error:", response.errors);
-      }
-    });
-    // sendDuration(board_id, id, duration_id, timeTracking.duration).then((response) => {
-    //   if(response.errors){
-    //     console.error("Send Duration Error:", response.errors);
-    //   }
-    // });
    
     console.log("End of trigger");
     return res.status(200).send({ data });
